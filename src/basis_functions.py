@@ -381,12 +381,149 @@ class BSpline1D(OrthonormalBasis):
         result &= torch.allclose(self._knots, other._knots)
         result &= self._degree == other._degree
         return result
+
+
+# class Fourier1D(OrthonormalBasis):
+#     """
+#     A class representing a one-dimensional Fourier basis for function approximation.
+
+#     This class provides a Fourier basis that can be used to represent functions 
+#     in terms of sine and cosine basis functions, defined over a specified domain.
+#     The basis functions can be optionally normalized.
+
+#     Attributes:
+#     ----------
+#     _n : int
+#         The number of basis functions (sine and cosine terms).
+#     _domain : tuple[float, float]
+#         The domain over which the Fourier basis functions are defined.
+#     normalize : bool
+#         Whether to normalize the Fourier basis functions.
+#     period : float
+#         The period of the Fourier basis functions (default is 1.0).
+#     """
+
+#     def __init__(self, n: int, domain: tuple[float, float] = (0.0, 1.0), normalize=True, period=1.0) -> None:
+#         """
+#         Initializes the Fourier1D basis.
+
+#         Parameters:
+#         ----------
+#         n : int
+#             The number of basis functions (sine and cosine terms).
+#         domain : tuple[float, float], optional
+#             The domain over which the Fourier basis functions are defined, 
+#             defaults to (0.0, 1.0).
+#         normalize : bool, optional
+#             Whether to normalize the Fourier basis functions. Defaults to True.
+#         period : float, optional
+#             The period of the Fourier basis functions. Defaults to 1.0.
+#         """
+#         self._n = n
+#         self._domain = domain
+#         self.normalize = normalize
+#         self.period = period
+
+#     def __call__(self, points: torch.Tensor) -> torch.Tensor:
+#         """
+#         Evaluates the Fourier basis functions at a given point or set of points.
+
+#         Parameters:
+#         ----------
+#         points : torch.Tensor
+#             The points at which to evaluate the Fourier basis functions. 
+#             The input should be a tensor of shape (m,), where `m` is the 
+#             number of points.
+
+#         Returns:
+#         -------
+#         torch.Tensor
+#             A tensor of shape (n,) representing the evaluated Fourier basis 
+#             functions at the given points, where `n` is the number of basis 
+#             functions. Outside the domain, the values are set to 0.
+#         """
+#         # Mask to set values outside the domain to 0
+#         domain_mask = (points >= self._domain[0]) & (points <= self._domain[1])
+
+#         # Initialize the y tensor to ones, then apply the mask
+#         y = torch.zeros((self._n,), dtype=points.dtype, device=points.device)
+
+#         # Only compute the Fourier basis where the domain mask is True
+#         if torch.any(domain_mask):
+#             y[0] = 1
+#             for k in range(1, self._n):
+#                 p = torch.tensor(math.ceil(k / 2), dtype=points.dtype, device=points.device)
+#                 factor = 2 * torch.pi * p / self.period
+#                 if (k - 1) % 2 == 0:
+#                     coef = (4 * torch.pi * p * (self._domain[1] - self._domain[0]) 
+#                             - torch.sin(4 * torch.pi * p * self._domain[0]) 
+#                             + torch.sin(4 * torch.pi * p * self._domain[1])) / (8 * torch.pi * p)
+#                     coef = torch.sqrt(coef)
+#                     y[k] = torch.cos(factor * points) / coef if self.normalize else torch.cos(factor * points)
+#                 else:
+#                     coef = (4 * torch.pi * p * (self._domain[1] - self._domain[0]) 
+#                             + torch.sin(4 * torch.pi * p * self._domain[0]) 
+#                             - torch.sin(4 * torch.pi * p * self._domain[1])) / (8 * torch.pi * p)
+#                     coef = torch.sqrt(coef)
+#                     y[k] = torch.sin(factor * points) / coef if self.normalize else torch.sin(factor * points)
+#             # Apply domain mask to set points outside the domain to 0
+#             y = y * domain_mask.float()
+
+#         return y
+
+#     @property
+#     def dimension(self) -> int:
+#         """
+#         Returns the number of basis functions in the Fourier series.
+
+#         Returns:
+#         -------
+#         int
+#             The number of basis functions (sine and cosine terms).
+#         """
+#         return self._n
+
+#     @property
+#     def support(self) -> tuple:
+#         """
+#         Returns the domain of the Fourier basis.
+
+#         Returns:
+#         -------
+#         tuple[float, float]
+#             The domain over which the Fourier basis functions are defined.
+#         """
+#         return self._domain
     
+#     truncated_support = support
+
+#     def __eq__(self, other) -> bool:
+#         """
+#         Compares two Fourier1D instances for equality.
+
+#         Two Fourier1D instances are considered equal if they have the 
+#         same number of basis functions and the same domain.
+
+#         Parameters:
+#         ----------
+#         other : Fourier1D
+#             Another Fourier1D instance to compare with.
+
+#         Returns:
+#         -------
+#         bool
+#             True if the two instances are equal, False otherwise.
+#         """
+#         result = isinstance(other, Fourier1D)
+#         result &= self._n == other._n
+#         result &= self._domain == other._domain
+#         result &= self.period == other.period
+#         return result
+
 
 class Fourier1D(OrthonormalBasis):
     """
     A class representing a one-dimensional Fourier basis for function approximation.
-
     This class provides a Fourier basis that can be used to represent functions 
     in terms of sine and cosine basis functions, defined over a specified domain.
     The basis functions can be optionally normalized.
@@ -399,9 +536,11 @@ class Fourier1D(OrthonormalBasis):
         The domain over which the Fourier basis functions are defined.
     normalize : bool
         Whether to normalize the Fourier basis functions.
+    period : float
+        The period of the Fourier basis functions (default is 1.0).
     """
 
-    def __init__(self, n: int, domain: tuple[float, float] = (0.0, 1.0), normalize=True) -> None:
+    def __init__(self, n: int, domain: tuple[float, float] = (0.0, 1.0), normalize=True, period=1.0) -> None:
         """
         Initializes the Fourier1D basis.
 
@@ -414,10 +553,13 @@ class Fourier1D(OrthonormalBasis):
             defaults to (0.0, 1.0).
         normalize : bool, optional
             Whether to normalize the Fourier basis functions. Defaults to True.
+        period : float, optional
+            The period of the Fourier basis functions. Defaults to 1.0.
         """
         self._n = n
         self._domain = domain
         self.normalize = normalize
+        self.period = period
 
     def __call__(self, points: torch.Tensor) -> torch.Tensor:
         """
@@ -427,39 +569,47 @@ class Fourier1D(OrthonormalBasis):
         ----------
         points : torch.Tensor
             The points at which to evaluate the Fourier basis functions. 
-            The input should be a tensor of shape (m,), where `m` is the 
-            number of points.
+            The input should be a tensor of shape (m,) for a single point or 
+            (batch_size, m) for multiple points.
 
         Returns:
         -------
         torch.Tensor
-            A tensor of shape (n,) representing the evaluated Fourier basis 
-            functions at the given points, where `n` is the number of basis 
-            functions.
+            A tensor of shape (batch_size, n) or (n,) representing the evaluated 
+            Fourier basis functions at the given points, where `n` is the number 
+            of basis functions. Outside the domain, the values are set to 0.
         """
-        # Initialize the y tensor to ones
-        y = torch.ones((self._n,), dtype=points.dtype, device=points.device)
+        # Reshape points to ensure proper broadcasting
+        points = points.unsqueeze(-1) if points.ndim == 1 else points  # Shape (batch_size, 1) if batched
+        
+        # Mask to set values outside the domain to 0
+        domain_mask = (points >= self._domain[0]) & (points <= self._domain[1])
 
-        for k in range(1, self._n):
-            p = torch.tensor(math.ceil(k / 2))
-            if (k - 1) % 2 == 0:
-                coef = (
-                    4 * torch.pi * p * (self._domain[1] - self._domain[0])
-                    - torch.sin(4 * torch.pi * p * self._domain[0])
-                    + torch.sin(4 * torch.pi * p * self._domain[1])
-                ) / (8 * torch.pi * p)
-                coef = torch.sqrt(coef)
-                y[k] = torch.cos(2 * torch.pi * p * points) / coef if self.normalize else torch.cos(2 * torch.pi * p * points)
-            else:
-                coef = (
-                    4 * torch.pi * p * (self._domain[1] - self._domain[0])
-                    + torch.sin(4 * torch.pi * p * self._domain[0])
-                    - torch.sin(4 * torch.pi * p * self._domain[1])
-                ) / (8 * torch.pi * p)
-                coef = torch.sqrt(coef)
-                y[k] = torch.sin(2 * torch.pi * p * points) / coef if self.normalize else torch.sin(2 * torch.pi * p * points)
+        # Initialize the y tensor with zeros
+        y = torch.zeros((points.shape[0], self._n), dtype=points.dtype, device=points.device)
 
-        return y
+        # Only compute the Fourier basis where the domain mask is True
+        if torch.any(domain_mask):
+            y[:, 0] = 1
+            for k in range(1, self._n):
+                p = torch.tensor(math.ceil(k / 2), dtype=points.dtype, device=points.device)
+                factor = 2 * torch.pi * p / self.period
+                if (k - 1) % 2 == 0:
+                    coef = (4 * torch.pi * p * (self._domain[1] - self._domain[0])
+                            - torch.sin(4 * torch.pi * p * self._domain[0])
+                            + torch.sin(4 * torch.pi * p * self._domain[1])) / (8 * torch.pi * p)
+                    coef = torch.sqrt(coef)
+                    y[:, k] = torch.cos(factor * points.squeeze(-1)) / coef if self.normalize else torch.cos(factor * points.squeeze(-1))
+                else:
+                    coef = (4 * torch.pi * p * (self._domain[1] - self._domain[0])
+                            + torch.sin(4 * torch.pi * p * self._domain[0])
+                            - torch.sin(4 * torch.pi * p * self._domain[1])) / (8 * torch.pi * p)
+                    coef = torch.sqrt(coef)
+                    y[:, k] = torch.sin(factor * points.squeeze(-1)) / coef if self.normalize else torch.sin(factor * points.squeeze(-1))
+            # Apply domain mask to set points outside the domain to 0
+            y = y * domain_mask.float()
+
+        return y.squeeze(0) if points.ndim == 1 else y
 
     @property
     def dimension(self) -> int:
@@ -507,4 +657,5 @@ class Fourier1D(OrthonormalBasis):
         result = isinstance(other, Fourier1D)
         result &= self._n == other._n
         result &= self._domain == other._domain
+        result &= self.period == other.period
         return result

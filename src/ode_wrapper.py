@@ -4,7 +4,6 @@ import numpy as np
 
 from typing import Union, Tuple
 from torchdiffeq import odeint
-from src.velocity_functions import Func, FuncTT
 
 
 # TT-parametrized ODE system inspired by the continuous normalizing flow formulation in Chen et al. 2018
