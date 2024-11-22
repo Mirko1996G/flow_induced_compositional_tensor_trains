@@ -76,21 +76,21 @@ class FuncTT(nn.Module):
         self.dims = [basis.dimension for basis in bases]
 
         # Initialize TT cores as learnable parameters
-        # self.size = np.sum(np.asarray(self.ranks[:-1]) * np.asarray(self.dims) * np.asarray(self.ranks[1:]))
-        # self.tt_cores = nn.ParameterList(
-        #     [nn.Parameter(torch.randn(self.ranks[i], self.dims[i], self.ranks[i+1]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
-        #         for i in range(len(self.dims))
-        #     ]
-        # )
-        
         self.size = np.sum(np.asarray(self.ranks[:-1]) * np.asarray(self.dims) * np.asarray(self.ranks[1:]))
         self.tt_cores = nn.ParameterList(
             [nn.Parameter(torch.randn(self.ranks[i], self.dims[i], self.ranks[i+1]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
-                for i in range(len(self.dims) - 1)
-            ]
-            + [nn.Parameter(torch.zeros(self.ranks[len(self.dims) - 1], self.dims[len(self.dims) - 1], self.ranks[len(self.dims)]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
+                for i in range(len(self.dims))
             ]
         )
+        
+        # self.size = np.sum(np.asarray(self.ranks[:-1]) * np.asarray(self.dims) * np.asarray(self.ranks[1:]))
+        # self.tt_cores = nn.ParameterList(
+        #     [nn.Parameter(torch.randn(self.ranks[i], self.dims[i], self.ranks[i+1]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
+        #         for i in range(len(self.dims) - 1)
+        #     ]
+        #     + [nn.Parameter(torch.zeros(self.ranks[len(self.dims) - 1], self.dims[len(self.dims) - 1], self.ranks[len(self.dims)]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
+        #     ]
+        # )
 
     def __call__(self, t: float, x: torch.Tensor):
         # Check if input `x` has a batch dimension
