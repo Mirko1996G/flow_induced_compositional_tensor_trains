@@ -78,7 +78,7 @@ class FuncTT(nn.Module):
         # Initialize TT cores as learnable parameters
         self.size = np.sum(np.asarray(self.ranks[:-1]) * np.asarray(self.dims) * np.asarray(self.ranks[1:]))
         self.tt_cores = nn.ParameterList(
-            [nn.Parameter(torch.randn(self.ranks[i], self.dims[i], self.ranks[i+1]).to(torch.float64) / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
+            [nn.Parameter(torch.randn(self.ranks[i], self.dims[i], self.ranks[i+1]).to(torch.float64) * 1e1 / torch.sqrt(torch.tensor(self.size, dtype=torch.float32)))
                 for i in range(len(self.dims))
             ]
         )

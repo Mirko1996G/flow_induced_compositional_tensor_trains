@@ -125,16 +125,74 @@ from typing import Union, Tuple
 #     else:
 #         return legendre_polys
 # New: Legendre recurrence for derivatives of order m
+# def legendre_recurrence(x, n_max, m_derivative=0):
+#     """
+#     Compute the Legendre polynomials up to degree n_max and their m-th derivatives
+#     at a given point or array of points x using PyTorch.
+    
+#     Args:
+#         x (torch.Tensor): The point(s) at which the Legendre polynomials are to be evaluated.
+#         n_max (int): The maximum degree of Legendre polynomials to compute.
+#         m_derivative (int): The order of the derivative to compute.
+    
+#     Returns:
+#         torch.Tensor: A sequence of Legendre polynomial values or their derivatives of shape 
+#                       (batch_size, dimensionality, n_max+1), evaluated at point(s) x.
+#                       The i-th entry of the output array corresponds to the Legendre 
+#                       polynomial of degree i or its m-th derivative.
+#     """
+#     # Ensure x is a torch tensor with dtype float64
+#     x = torch.as_tensor(x, dtype=torch.float64)
+
+#     if x.ndim == 1:
+#         x = x.unsqueeze(0)  # Add a batch dimension if x is 1D
+
+#     # Initialize the Legendre polynomials for degree 0 and 1
+#     shape = x.shape + (n_max + 1,)
+#     legendre_polys = torch.zeros(shape, dtype=torch.float64, device=x.device)
+#     legendre_polys[..., 0] = 1.0  # P_0(x) = 1
+#     if n_max >= 1:
+#         legendre_polys[..., 1] = x  # P_1(x) = x
+
+#     # Use the recurrence relation to compute higher-degree polynomials
+#     polys = [legendre_polys[..., 0], legendre_polys[..., 1]]
+
+#     # Initialize the derivatives for each order up to m_derivative
+#     derivs = torch.zeros_like(legendre_polys)
+#     if m_derivative > 0:
+#         # Compute derivatives
+#         for n in range(n_max + 1):
+#             if n < m_derivative:
+#                 derivs[..., n] = 0.0
+#             elif n == m_derivative:
+#                 derivs[..., n] = math.factorial(2 * m_derivative) / (2 ** m_derivative * math.factorial(m_derivative))
+#             else:
+#                 derivs[..., n] = ((2 * n - 1) * x * derivs[..., n - 1] - (n - 1 + m_derivative) * derivs[..., n - 2]) / (n - m_derivative)
+#         legendre_polys = derivs
+#     else:
+#         # Compute polynomials
+#         for n in range(1, n_max):
+#             # Compute P_{n+1}(x) using the Legendre recurrence relation
+#             p_ip1 = ((2 * n + 1) * x * polys[-1] - n * polys[-2]) / (n + 1)
+#             polys.append(p_ip1)
+#         # Stack the computed polynomials along the last dimension
+#         legendre_polys = torch.stack(polys, dim=-1)
+    
+#     # Remove the added batch dimension if x was originally 1D
+#     if legendre_polys.shape[0] == 1:
+#         return legendre_polys.squeeze(0)
+#     else:
+#         return legendre_polys
 def legendre_recurrence(x, n_max, m_derivative=0):
     """
     Compute the Legendre polynomials up to degree n_max and their m-th derivatives
     at a given point or array of points x using PyTorch.
-    
+
     Args:
         x (torch.Tensor): The point(s) at which the Legendre polynomials are to be evaluated.
         n_max (int): The maximum degree of Legendre polynomials to compute.
         m_derivative (int): The order of the derivative to compute.
-    
+
     Returns:
         torch.Tensor: A sequence of Legendre polynomial values or their derivatives of shape 
                       (batch_size, dimensionality, n_max+1), evaluated at point(s) x.
@@ -144,49 +202,56 @@ def legendre_recurrence(x, n_max, m_derivative=0):
     # Ensure x is a torch tensor with dtype float64
     x = torch.as_tensor(x, dtype=torch.float64)
 
+    # Add batch dimension if x is 1D
+    added_batch_dim = False
     if x.ndim == 1:
-        x = x.unsqueeze(0)  # Add a batch dimension if x is 1D
+        x = x.unsqueeze(0)
+        added_batch_dim = True
 
-    # Initialize the Legendre polynomials for degree 0 and 1
-    shape = x.shape + (n_max + 1,)
-    legendre_polys = torch.zeros(shape, dtype=torch.float64, device=x.device)
-    legendre_polys[..., 0] = 1.0  # P_0(x) = 1
+    # Initialize tensors for Legendre polynomials
+    batch_size, dims = x.shape
+    polys = [torch.ones((batch_size, dims), dtype=torch.float64, device=x.device)]  # P_0(x) = 1
+
     if n_max >= 1:
-        legendre_polys[..., 1] = x  # P_1(x) = x
+        polys.append(x)  # P_1(x) = x
 
-    # Use the recurrence relation to compute higher-degree polynomials
-    polys = [legendre_polys[..., 0], legendre_polys[..., 1]]
-
-    # Initialize the derivatives if m_derivative > 0
-    if m_derivative > 0:
-        legendre_derivs = torch.zeros_like(legendre_polys)
-        legendre_derivs[..., 0] = 0.0  # Derivative of P_0(x) = 0
-        if n_max >= 1:
-            legendre_derivs[..., 1] = 1.0  # Derivative of P_1(x) = 1
-        derivs = [legendre_derivs[..., 0], legendre_derivs[..., 1]]
-
-    # Compute polynomials and their derivatives if needed
-    for n in range(1, n_max):
-        # Compute P_{n+1}(x) using the Legendre recurrence relation
-        p_ip1 = ((2 * n + 1) * x * polys[-1] - n * polys[-2]) / (n + 1)
-        polys.append(p_ip1)
-        
-        if m_derivative > 0:
-            # Compute the derivative using the recurrence relation for derivatives
-            d_ip1 = ((2 * n + 1) * (polys[-2] + x * derivs[-1]) - n * derivs[-2]) / (n + 1)
-            derivs.append(d_ip1)
-
-    # Stack the computed polynomials or their derivatives along the last dimension
+    # Compute the Legendre polynomials or their derivatives
     if m_derivative == 0:
-        legendre_polys = torch.stack(polys, dim=-1)
+        for n in range(1, n_max):
+            p_next = ((2 * n + 1) * x * polys[-1] - n * polys[-2]) / (n + 1)
+            polys.append(p_next)
+            
+        # Stack all computed polynomials along the last dimension
+        result = torch.stack(polys, dim=-1)
+
     else:
-        legendre_polys = torch.stack(derivs, dim=-1)
+        # Compute derivatives
+        derivs = []
+        for n in range(n_max + 1):
+            if n < m_derivative:
+                derivs.append(torch.zeros_like(x))
+            elif n == m_derivative:
+                d_next = (
+                    math.factorial(2 * m_derivative) / (
+                    (2 ** m_derivative) * math.factorial(m_derivative)
+                    ) * torch.ones_like(x)
+                )
+                derivs.append(d_next)
+            else:
+                d_next = (
+                    ((2 * n - 1) * x * derivs[n - 1] - (n - 1 + m_derivative) * derivs[n - 2]) /
+                    (n - m_derivative)
+                )
+                derivs.append(d_next)
+
+        # Stack all computed derivatives along the last dimension
+        result = torch.stack(derivs, dim=-1)
 
     # Remove the added batch dimension if x was originally 1D
-    if legendre_polys.shape[0] == 1:
-        return legendre_polys.squeeze(0)
-    else:
-        return legendre_polys
+    if added_batch_dim:
+        result = result.squeeze(0)
+
+    return result
 
 def hermite_recurrence(x, n_max):
     """
@@ -611,7 +676,7 @@ class OrthonormalLegendre1D(ABC):
         Compares two OrthonormalLegendre1D instances for equality.
 
         Two instances are considered equal if they have the same domain.
-        
+
         Parameters:
         ----------
         other : OrthonormalLegendre1D
